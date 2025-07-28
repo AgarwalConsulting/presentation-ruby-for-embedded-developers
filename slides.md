@@ -6,7 +6,7 @@ layout: true
 
 class: center, middle
 
-# {title}
+# Ruby for Embedded Developers
 
 Gaurav Agarwal
 
@@ -141,7 +141,7 @@ func main() {
 class: center, middle
 
 Code
-https://github.com/base-org/presentation-template
+https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
 Slides
-https://template.slides.base-org.com
+https://ruby-for-embedded-developers.slides.AgarwalConsulting.com
