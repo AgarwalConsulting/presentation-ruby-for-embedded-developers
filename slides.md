@@ -386,6 +386,7 @@ bitbake core-image-minimal
 This will take a while the first time (\~1–2 hours depending on CPU/network).
 
 ---
+class: center, middle
 
 ```bash
 runqemu qemuarm
@@ -434,7 +435,6 @@ class: center, middle
 - Full Rubygems CLI (especially on embedded)
 
 ---
-class: center, middle
 
 ✅ Use **vendor mode**
 
@@ -448,6 +448,7 @@ bundle install
 ```
 
 ---
+class: center, middle
 
 Then copy only:
 
@@ -455,6 +456,193 @@ Then copy only:
 vendor/bundle/ruby/*/gems/<your-gems>
 vendor/bundle/ruby/*/gems/<your-gems>/lib/
 ```
+
+---
+class: center, middle
+
+##### 🪛 3. **Static Gems or Packaging Ruby Code**
+
+---
+
+- Place scripts in `/usr/share/myapp/*.rb`
+
+- Write a small wrapper script (e.g., `/usr/bin/myapp`):
+
+  ```bash
+  #!/bin/sh
+  exec ruby /usr/share/myapp/start.rb "$@"
+  ```
+
+---
+
+✅ Convert into a single binary (optional):
+
+Tools like [Travelling Ruby](https://github.com/phusion/traveling-ruby) or even [mruby](https://mruby.org/) let you ship small interpreters with embedded scripts, though **mruby lacks many gems and standard Ruby features**.
+
+---
+class: center, middle
+
+##### 🔧 4. **Yocto Specific Tips**
+
+---
+class: center, middle
+
+Ruby comes from `meta-oe` (bitbake `ruby`)
+
+---
+
+- To reduce size:
+
+  - Use `.bbappend` to modify `do_install` and remove files
+
+  - Strip binaries in `do_install_append()`
+
+---
+
+- To vendor gems:
+
+  - Write a custom recipe for your app
+
+  - Install your app into image via `IMAGE_INSTALL_append = " myrubyapp"`
+
+---
+
+### What to Keep vs. Strip
+
+| Component         | Keep? | Why/Why Not                                |
+| ----------------- | ----- | ------------------------------------------ |
+| Core interpreter  | ✅     | Required                                   |
+| Rubygems CLI      | ❌     | Avoid if not installing gems at runtime    |
+| Bundler           | ❌     | Adds size; unnecessary in production       |
+| Extension headers | ❌     | Strip post-build                           |
+| Documentation     | ❌     | Use `--disable-install-doc`                |
+| Stdlib (partial)  | ✅/⚠️  | Keep only required ones (e.g. `fileutils`) |
+
+---
+
+### Test for Unused Libs
+
+After building, run in QEMU:
+
+```bash
+ldd `which ruby`
+```
+
+---
+
+Check for:
+
+- Unnecessary dynamic links (e.g. `libgmp`, `libreadline`)
+
+- Strip or link statically if needed
+
+---
+class: center, middle
+
+### Static vs Dynamic Linking
+
+---
+class: center, middle
+
+#### 🧱 Definitions (Quick Recap)
+
+---
+class: center, middle
+
+**Static Linking**: All libraries (e.g., `libc`, `libpthread`, `libm`, etc.) are compiled into the Ruby binary itself.
+
+---
+
+##### 🛠️ How (Buildroot Example)
+
+```bash
+make menuconfig
+→ Toolchain
+  → [*] Build static libraries
+→ Target packages → Interpreter Languages → Ruby
+→ Build Options → [*] Enable static build
+```
+
+---
+
+Or patch Ruby’s `./configure`:
+
+```bash
+./configure LDFLAGS="-static"
+```
+
+---
+
+You also need to:
+
+```bash
+export RUBY_STATIC=true
+```
+
+---
+class: center, middle
+
+Yocto static linking is harder (some recipes don't support `--enable-static` cleanly), but you can patch `ruby_%.bbappend` and tweak `EXTRA_OECONF`.
+
+---
+class: center, middle
+
+**Dynamic Linking**: Ruby binary references shared libraries (`.so` files) at runtime, loaded from `/lib`, `/usr/lib`, etc.
+
+---
+
+##### 🛠️ How (default in Buildroot and Yocto)
+
+Just build Ruby normally — it will link against shared libs like:
+
+```bash
+ldd `which ruby`
+```
+
+---
+
+Example:
+
+```
+libm.so.6 => /lib/arm-linux-gnueabihf/libm.so.6
+libpthread.so.0 => /lib/arm-linux-gnueabihf/libpthread.so.0
+libc.so.6 => /lib/arm-linux-gnueabihf/libc.so.6
+```
+
+---
+
+#### ⚖️ When to Use Which?
+
+| Scenario                             | Static | Dynamic |
+| ------------------------------------ | ------ | ------- |
+| Minimal rootfs or BusyBox-only image | ✅      | ❌       |
+| QEMU/real hardware with glibc/musl   | ✅/⚠️   | ✅       |
+| You want to copy 1 binary and run    | ✅      | ❌       |
+| Need smaller storage use overall     | ❌      | ✅       |
+| You want flexibility to update       | ❌      | ✅       |
+| You control the full rootfs layout   | ✅      | ✅       |
+
+---
+
+#### 🔍 Mixed Strategy (Hybrid)
+
+You can:
+
+- Statically link Ruby itself
+
+- Dynamically link non-core tools (e.g., systemd, openssl)
+
+- Use static Ruby with vendored gems (pure Ruby only, no native extensions)
+
+---
+class: center, middle
+
+## Working with Files
+
+---
+class: center, middle
+
+## Raw Sockets
 
 ---
 
