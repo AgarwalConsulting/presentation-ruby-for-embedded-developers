@@ -1811,6 +1811,31 @@ Use When:
 ---
 class: center, middle
 
+*Preemptive vs Cooperative Scheduling*
+
+---
+class: center, middle
+
+**Preemptive Scheduling**: The system **interrupts** running tasks automatically to switch between them.
+
+---
+class: center, middle
+
+OS or runtime forcibly switches tasks at intervals.
+
+---
+class: center, middle
+
+**Cooperative Scheduling**: Tasks must **voluntarily yield** control to let others run.
+
+---
+class: center, middle
+
+No context switch unless the code calls `yield`, `await`, etc.
+
+---
+class: center, middle
+
 #### **Ractors** (Ruby 3.0+)
 
 ---
