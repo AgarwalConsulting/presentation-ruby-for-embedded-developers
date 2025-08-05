@@ -783,6 +783,11 @@ Deep Copy?
 ---
 class: center, middle
 
+Ruby's standard library does not include a `deep_freeze` method.
+
+---
+class: center, middle
+
 ## Managing memory & object state
 
 ---
@@ -1375,6 +1380,15 @@ valgrind --tool=memcheck ruby -d myscript.rb
 ```
 
 ---
+
+| Option                    | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `--leak-check=full`       | Detect and show all memory leaks                           |
+| `--show-leak-kinds=all`   | Show definite, indirect, possible, reachable leaks         |
+| `--track-origins=yes`     | Track origin of uninitialized values (slower, but helpful) |
+| `--log-file=valgrind.log` | Save output to a log file                                  |
+
+---
 class: center, middle
 
 ##### 🔹 `derailed_benchmarks` (Optional)
@@ -1570,6 +1584,592 @@ When to Use What?
 | Comparing multiple implementations            | `benchmark-ips`      |
 | Need statistically meaningful throughput info | `benchmark-ips`      |
 | Measuring wall time for I/O                   | `Benchmark`          |
+
+---
+class: center, middle
+
+## Concurrency in Ruby
+
+---
+class: center, middle
+
+*Concurrency vs Parallelism*
+
+---
+class: center, middle
+
+**Concurrency**: Handling multiple tasks at once — not necessarily at the same *time*, but switching between them.
+
+---
+class: center, middle
+
+**Parallelism**: Running multiple tasks *simultaneously* on multiple CPU cores.
+
+---
+class: center, middle
+
+MRI Ruby supports **concurrency** well but has limited **parallelism** due to the Global VM Lock (GVL).
+
+---
+class: center, middle
+
+The GVL ensures that only one thread can execute Ruby code at a time in MRI, even if your machine has multiple CPU cores.
+
+---
+
+### 🔍 Why does the GVL exist?
+
+1. **MRI is not thread-safe at the C level** — most Ruby objects are not protected with fine-grained locks.
+
+2. The GVL simplifies memory management (especially for the garbage collector).
+
+3. It avoids concurrency bugs at the interpreter level — at the cost of real parallelism.
+
+---
+
+### 🔬 MRI and GVL
+
+- In **MRI**, the Global VM Lock means only one thread can execute Ruby code at a time.
+
+- **I/O-bound** concurrency still works well (threads yield during I/O).
+
+- For **parallel CPU-bound** tasks, prefer Ractors or switch to **JRuby**/**TruffleRuby**.
+
+---
+
+#### ✅ Alternatives to Get Around the GVL
+
+1. **Ractors (Ruby 3.0+)**
+
+   - Each Ractor has its own GVL.
+
+2. **JRuby / TruffleRuby**
+
+   - No GVL; threads run in parallel.
+
+3. **Child processes / fork**
+
+   - True OS-level concurrency.
+
+4. **Native Extensions (C)**
+
+   - Can release GVL around blocking code with `rb_thread_call_without_gvl`.
+
+---
+class: center, middle
+
+### 🔧 **Concurrency Primitives in Ruby**
+
+---
+class: center, middle
+
+#### **Threads** (native threads)
+
+---
+class: center, middle
+
+Created via `Thread.new`
+
+---
+class: center, middle
+
+In MRI (CRuby), threads are **real OS threads**, but only one can run Ruby code at a time due to the GVL.
+
+---
+class: center, middle
+
+Useful for I/O-bound tasks.
+
+---
+
+##### ✅ GVL is released when...
+
+MRI releases the GVL in certain **blocking operations**, like:
+
+- File I/O (`read`, `write`)
+- Network I/O (`Net::HTTP`, `TCPSocket`)
+- Sleep (`sleep`, `IO#wait`, etc.)
+- External C extensions that explicitly call `rb_thread_call_without_gvl`
+
+This allows **I/O-bound threads to run concurrently**, even if not in parallel.
+
+---
+class: center, middle
+
+##### ⚠️ Race Conditions
+
+---
+class: center, middle
+
+A **race condition** happens when multiple threads access or modify shared data **without synchronization**.
+
+---
+class: center, middle
+
+The operations are *not atomic* — even `counter += 1` is 3 steps (read, add, write).
+
+---
+class: center, middle
+
+`Queue`, `SizedQueue`
+
+---
+class: center, middle
+
+##### ⚠️ Deadlocks
+
+---
+class: center, middle
+
+**Deadlock** = two or more threads wait on each other to release locks — and no one does.
+
+---
+
+💡 **Avoid deadlocks**:
+
+- Lock in a consistent order.
+
+- Use `Timeout.timeout` as a fallback.
+
+- Prefer message-passing.
+
+---
+
+##### Summarising Threads
+
+- Native OS threads.
+
+- **Preemptive** — the VM switches between threads automatically.
+
+- Works well for **I/O-bound** tasks in MRI, but **not true parallelism** due to the GVL.
+
+---
+
+Use When:
+
+- You need concurrent network calls or disk I/O.
+
+- You don't need fine-grained scheduling.
+
+- Thread blocking is acceptable.
+
+---
+class: center, middle
+
+#### **Fibers** (lightweight coroutines)
+
+---
+
+- Introduced in Ruby 1.9.
+
+- Cooperatively scheduled: they yield control explicitly.
+
+- Great for building your own schedulers or async frameworks.
+
+---
+
+- **Manual context switching** using `Fiber#resume` and `Fiber.yield`.
+
+- Lightweight — no OS involvement.
+
+- Not scheduled automatically — **you manage switching**.
+
+---
+
+- **Fibers share the same thread and memory**.
+
+- No preemption: race conditions don’t occur unless you use multiple threads with fibers.
+
+- **Fibers must yield manually** — so no interleaving surprises.
+
+---
+
+- Easy to share data
+
+- No locks needed — unless used across threads
+
+---
+
+Use When:
+
+- You want low-overhead concurrency.
+
+- You're building an event loop or coroutine-style control.
+
+---
+
+*But:*
+
+- Not scalable for parallelism
+
+  Doesn't scale well without a scheduler or framework.
+
+- You must yield often enough
+
+  Tedious to manage manually.
+
+---
+class: center, middle
+
+#### **Ractors** (Ruby 3.0+)
+
+---
+class: center, middle
+
+Provide **true parallelism** by isolating memory
+
+---
+class: center, middle
+
+No shared state — communication only via messages
+
+---
+class: center, middle
+
+Ractors are Ruby’s take on the actor model
+
+---
+
+- Each actor (Ractor) has its own heap, stack, and **GVL**.
+
+- Actors do not share memory.
+
+- They communicate by message passing — like Erlang or Elixir.
+
+---
+
+`1.` **Each Ractor runs in its own thread**
+
+- Internally, it’s a native thread (via pthreads or similar).
+
+- Each Ractor has **its own Global VM Lock** — meaning they can execute Ruby code truly **in parallel**. Great for CPU-bound tasks.
+
+---
+
+`2.` **Memory Isolation**
+
+- Objects created in one Ractor cannot be directly accessed by another.
+
+- Only **shareable objects** or **deep copies** can be sent between ractors.
+
+---
+
+`3.` **Communication via Channels**
+
+- Ractors send and receive messages using:
+
+  - `r.send(obj)`
+  - `Ractor.receive`
+  - `r.take`
+  - `Ractor.yield`
+
+- Behind the scenes, Ruby uses **lock-free concurrent queues** to pass serialized or frozen objects across Ractor boundaries.
+
+---
+
+- There’s **no shared state**, so **no need for mutexes**.
+
+- Message passing is **blocking by default**, like CSP (Go) or actors (Erlang).
+
+---
+
+##### What Happens on `r.send(obj)`?
+
+1. Ruby checks if `obj` is **shareable** (e.g. symbol, integer, deeply frozen).
+
+2. If yes → enqueue into ractor’s **incoming port**.
+
+3. If no → raises `Ractor::IsolationError`.
+
+---
+class: center, middle
+
+Ractor provides `.shareable?` and `.make_shareable(obj)` which deep freeze objects and ensure they’re usable across threads/ractors
+
+---
+
+##### 🔩 Internals of Ractor (MRI Implementation)
+
+- Ractor is implemented in C inside `ractor.c` (MRI).
+
+- Each Ractor wraps:
+
+  - Its own **Ruby VM context** (`rb_vm_t`)
+  - Its own **fiber scheduler**
+  - Its own **GVL**
+
+- Message passing uses:
+
+  - `ractor_incoming_port_t` (a queue of incoming messages)
+  - `ractor_message_t` (structure for passing frozen/shared Ruby values)
+
+---
+
+✅ You can convert an object to be shareable:
+
+```ruby
+obj = { a: 1, b: 2 }.freeze
+Ractor.make_shareable(obj)
+r.send(obj)
+```
+
+---
+
+##### ⚠️ Restrictions by Design of Ractors
+
+| Limitation                              | Why                          |
+| --------------------------------------- | ---------------------------- |
+| No global variables access              | To avoid hidden dependencies |
+| No IO sharing                           | Avoid race conditions        |
+| No mutable object sharing               | To enforce safety            |
+| Cannot call methods on external objects | Isolation principle          |
+
+---
+
+##### Threads vs Ractors
+
+| Feature            | Threads              | Ractors              |
+| ------------------ | -------------------- | -------------------- |
+| Memory model       | Shared               | Isolated             |
+| Parallel execution | ❌ (GVL)              | ✅ (each has own GVL) |
+| Communication      | Shared memory, mutex | Message passing only |
+| Safety             | Unsafe without locks | Safe by design       |
+
+---
+class: center, middle
+
+*Caveat:* Not all gems are Ractor-safe yet
+
+---
+
+##### 🔬 Debugging Ractor Execution
+
+- Use `Ractor#inspect` to see internal state
+
+- Enable verbose GC logs to see memory behavior
+
+- Add `puts` statements to trace communication timing
+
+---
+
+##### Why Use Ractors?
+
+| Feature               | Ractors                   |
+| --------------------- | ------------------------- |
+| CPU-bound parallelism | ✅ Yes                     |
+| I/O-bound parallelism | Threads or `async` better |
+| Shared memory         | ❌ Never                   |
+| Actor-like isolation  | ✅ By default              |
+| Race-free design      | ✅ Yes                     |
+
+---
+class: center, middle
+
+#### EventMachine (Event Loop, Reactor Pattern)**
+
+.content-credits[https://rubydoc.info/github/eventmachine/eventmachine/frames]
+
+---
+class: center, middle
+
+```bash
+gem install eventmachine
+```
+
+.content-credits[https://github.com/eventmachine/eventmachine]
+
+---
+
+- Event-driven framework using **reactor pattern**.
+
+- Based on a **single-threaded event loop**.
+
+- Similar in style to Node.js.
+
+---
+
+*Use Cases:*
+
+- You're building **high-throughput network servers** (TCP, HTTP, WebSocket).
+
+- You want **non-blocking I/O** with callbacks.
+
+---
+
+*Pitfalls:*
+
+- Callback hell.
+
+- Hard to integrate blocking Ruby code or existing libraries.
+
+---
+
+##### 🔄 **Control Flow**
+
+- `EM.run`: Starts the main event loop.
+
+- `EM.stop`: Stops the event loop gracefully.
+
+- `EM.defer`: Runs blocking code in a thread pool to avoid blocking the reactor.
+
+---
+
+##### 🔁 **Timers**
+
+- `add_timer`: Runs a block once after a delay.
+
+- `add_periodic_timer`: Repeats a block at fixed intervals.
+
+---
+
+##### 🔌 **TCP Server**
+
+- `start_server`: Starts a TCP server that listens for incoming connections.
+
+- `receive_data`: Callback triggered when the server receives data from a client.
+
+- `send_data`: Sends data back to the connected client.
+
+- `unbind`: Called when the client disconnects.
+
+---
+
+##### 📞 **TCP Client**
+
+- `connect`: Connects to a remote TCP server asynchronously.
+
+- `post_init`: Callback triggered when the connection is successfully established.
+
+- `receive_data`: Called when the client receives a message from the server.
+
+- `close_connection`: Gracefully closes the connection.
+
+---
+
+##### 🌐 **Async HTTP (with em-http-request)**
+
+- `HttpRequest.get`: Makes a non-blocking HTTP GET request.
+
+- `callback`: Runs when the HTTP request completes successfully.
+
+- `errback`: Runs when the HTTP request fails.
+
+---
+
+##### 📡 **UDP Server**
+
+- `open_datagram_socket`: Starts a UDP server to receive datagrams.
+
+- `receive_data`: Triggered when a UDP packet is received.
+
+---
+
+| Use Case     | Module / Pattern                  |
+| ------------ | --------------------------------- |
+| Timers       | `add_timer`, `add_periodic_timer` |
+| TCP Server   | `start_server` + module           |
+| TCP Client   | `connect` + module                |
+| HTTP (async) | `em-http-request` gem             |
+| UDP server   | `open_datagram_socket`            |
+
+---
+class: center, middle
+
+#### `async` Gem (Fiber-based Event Loop)
+
+.content-credits[https://socketry.github.io/async/guides/getting-started/index]
+
+---
+class: center, middle
+
+```bash
+gem install async
+```
+
+.content-credits[https://github.com/socketry/async]
+
+---
+class: center, middle
+
+Fiber-based concurrency using a scheduler.
+
+---
+
+- Modern, **structured concurrency** built on **Fibers + scheduler**.
+
+- Replaces manual Fiber juggling.
+
+- Like `async/await` in JS or Python.
+
+---
+
+*Use When:*
+
+- You want a clean, modern, **async/await-like style** in Ruby.
+
+- You're doing high-concurrency I/O like HTTP requests, DB access.
+
+---
+
+*Pitfalls:*
+
+- Blocking operations **will block the whole reactor** unless handled.
+
+- Requires you to use compatible (non-blocking) libraries.
+
+---
+class: center, middle
+
+#### **`concurrent-ruby`**
+
+Unified interface to threads, futures, actors, promises, etc.
+
+---
+class: center, middle
+
+```bash
+gem install concurrent-ruby
+```
+
+.content-credits[https://github.com/ruby-concurrency/concurrent-ruby]
+
+---
+
+class: center, middle
+
+### Overview of concurrency
+
+---
+
+| Feature           | Threads    | Fibers       | EventMachine     | `async` Gem       |
+| ----------------- | ---------- | ------------ | ---------------- | ----------------- |
+| Scheduling        | Preemptive | Cooperative  | Event loop       | Fiber scheduler   |
+| Parallelism (MRI) | ❌ (GVL)    | ❌            | ❌                | ❌                 |
+| Suitable for      | I/O-bound  | Fine control | Network services | Structured I/O    |
+| Blocking-safe?    | Mixed      | ❌            | ❌                | ❌ (must be async) |
+| Easy to debug?    | Medium     | Hard         | Hard             | Easier            |
+| Memory overhead   | Medium     | Low          | Low              | Low               |
+
+---
+
+| Situation                             | Use...                                      |
+| ------------------------------------- | ------------------------------------------- |
+| Parallel HTTP requests or file I/O    | **Threads** or `async`                      |
+| Custom coroutine logic                | **Fibers**                                  |
+| High-performance network server       | **EventMachine** or **async**               |
+| Async database calls, modern Ruby I/O | **async**                                   |
+| CPU-bound work                        | **Ractors** (not in this list) or processes |
+
+---
+
+### 🔁 GVL in Practice: When it matters
+
+| Task Type         | GVL Problem? | Solution                                     |
+| ----------------- | ------------ | -------------------------------------------- |
+| CPU-bound         | ❌ Yes        | Use **Ractors**, JRuby, or child processes   |
+| I/O-bound         | ✅ No         | Threads work fine                            |
+| Native extensions | ⚠️ Depends   | Must release GVL manually (e.g., `Nokogiri`) |
+| Async I/O         | ✅ No         | Use `async`, EM, etc.                        |
 
 ---
 class: center, middle
