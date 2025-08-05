@@ -2152,13 +2152,23 @@ class: center, middle
 
 ---
 
-| Situation                             | Use...                                      |
-| ------------------------------------- | ------------------------------------------- |
-| Parallel HTTP requests or file I/O    | **Threads** or `async`                      |
-| Custom coroutine logic                | **Fibers**                                  |
-| High-performance network server       | **EventMachine** or **async**               |
-| Async database calls, modern Ruby I/O | **async**                                   |
-| CPU-bound work                        | **Ractors** (not in this list) or processes |
+| Model        | Sharing Allowed | How to Share                       | Race Safety                     |
+| ------------ | --------------- | ---------------------------------- | ------------------------------- |
+| Threads      | ✅ Yes           | Direct access, mutex               | ❌ Unsafe by default             |
+| Fibers       | ✅ Yes           | Shared memory (same thread)        | ✅ Safe (unless using Threads)   |
+| Ractors      | ❌ No            | `send`, `receive`, `take`, `yield` | ✅ Safe by design                |
+| async gem    | ✅ Yes (Fibers)  | Shared memory in same thread       | ✅ Safe if I/O non-blocking      |
+| EventMachine | ✅ Yes           | Same event loop/thread             | ✅ Safe unless manually threaded |
+
+---
+
+| Situation                             | Use...                        |
+| ------------------------------------- | ----------------------------- |
+| Parallel HTTP requests or file I/O    | **Threads** or `async`        |
+| Custom coroutine logic                | **Fibers**                    |
+| High-performance network server       | **EventMachine** or **async** |
+| Async database calls, modern Ruby I/O | **async**                     |
+| CPU-bound work                        | **Ractors** or processes      |
 
 ---
 
