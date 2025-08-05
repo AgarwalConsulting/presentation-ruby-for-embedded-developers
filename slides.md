@@ -659,16 +659,17 @@ class: center, middle
 
 - `spawn` - Starts a **new external process**. Returns immediately with the PID. Ruby keeps running.
 
-- Backticks ( `` `cmd` `` / `%x{}` ) - Runs a shell command and **returns its output** as a string. **Blocks until done**.
+- Backticks ( `cmd` / `%x{}` ) - Runs a shell command and **returns its output** as a string. **Blocks until done**.
 
 ---
----
 
-| Method                  | stdin support                               |
-| ----------------------- | ------------------------------------------- |
-| `` `cmd` `` (backticks) | ❌ No stdin control                          |
+Can't use stdin with:
+
+| Method                  | stdin support                                |
+| ----------------------- | -------------------------------------------- |
+| backticks               | ❌ No stdin control                          |
 | `exec`                  | ❌ Replaces Ruby process; no stdin from Ruby |
-| `system`                | 🚫 Limited — no direct stdin control        |
+| `system`                | 🚫 Limited — no direct stdin control         |
 
 ---
 class: center, middle
