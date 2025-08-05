@@ -2248,6 +2248,141 @@ class: center, middle
 ---
 class: center, middle
 
+## Web Services
+
+---
+class: center, middle
+
+### WEBrick: Embedded HTTP Server
+
+---
+class: center, middle
+
+`WEBrick` is a pure-Ruby, single-threaded HTTP server that's great for development and small embedded use cases.
+
+---
+class: center, middle
+
+```bash
+gem install webrick
+```
+
+.content-credits[https://github.com/ruby/webrick]
+
+---
+
+#### 🔹 **Strengths**
+
+- Zero dependencies (pure Ruby)
+
+- Simple to embed in CLI tools or Ruby apps
+
+- Great for local dev, diagnostics, mock APIs
+
+- Works with Protobuf and custom handlers
+
+---
+
+#### 🔻 **Limitations**
+
+- 🐌 **Single-threaded** by default — slow for concurrent clients
+
+- 🧱 No HTTP/2, WebSocket, or streaming support
+
+- 🛑 Lacks middleware, routing, async I/O
+
+- 🧵 No native fiber or thread pooling
+
+- 🚫 Not production-ready (no zero-downtime reloads, monitoring, etc.)
+
+---
+class: center, middle
+
+Use `WEBrick` to **create** a basic embedded HTTP server.
+
+---
+
+#### ✅ **Use WEBrick When:**
+
+- You’re building an **embedded control API**, dev server, or internal tool
+
+- You want **zero setup** and **vanilla Ruby**
+
+- You control all clients and traffic is low
+
+---
+
+### ❌ **Avoid WEBrick When:**
+
+- You need **performance, concurrency, or real routing**
+
+- You’re exposing the server to external/public clients
+
+- You need **modern protocols** (HTTP/2, WebSockets)
+
+---
+class: center, middle
+
+Use `Net::HTTP` to **call** web services (including your own WEBrick server).
+
+---
+class: center, middle
+
+## Protobuf
+
+.content-credits[https://protobuf.dev/]
+
+---
+class: center, middle
+
+```bash
+gem install google-protobuf
+```
+
+.content-credits[https://github.com/protocolbuffers/protobuf/tree/main/ruby]
+
+---
+
+### Steps
+
+- Define Your `.proto`
+
+  ```proto
+  message Greet {
+      string name = 1;
+  }
+  ```
+
+- Compile to Ruby
+
+  `protoc --ruby_out=. message.proto`
+
+- Use in Ruby
+
+  - `<Message>.new`
+  - `<Message>.encode`
+  - `<Message>.decode`
+
+---
+class: center, middle
+
+```ruby
+req['Content-Type'] = 'application/x-protobuf'
+```
+
+---
+
+## 🔹 Tips for Real-World Webserver with Protobuf
+
+- **Use gRPC** for bi-directional streaming and structured APIs (Ruby has a gRPC gem).
+
+- **Wrap with `rack`** if you want middleware, without using Sinatra/Rails.
+
+- **Use `puma` or `falcon`** for production-grade concurrency.
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
