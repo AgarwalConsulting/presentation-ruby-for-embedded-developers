@@ -2107,6 +2107,16 @@ class: center, middle
 ---
 class: center, middle
 
+Asynchronous programming (in any language, including Ruby) allows running many things at the same time.
+
+---
+class: center, middle
+
+Most often, those are multiple network I/O operations (like HTTP requests) because async is the most efficient at that.
+
+---
+class: center, middle
+
 ```bash
 gem install async
 ```
@@ -2125,6 +2135,35 @@ Fiber-based concurrency using a scheduler.
 - Replaces manual Fiber juggling.
 
 - Like `async/await` in JS or Python.
+
+---
+class: center, middle
+
+##### Async ecosystem
+
+Async is also an ecosystem of gems that work nicely together.
+
+.content-credits[https://brunosutic.com/blog/async-ruby]
+
+---
+
+- `async-http` a featureful HTTP client
+
+- `falcon` HTTP server built around Async core
+
+- `async-await` syntax sugar for Async
+
+- `async-redis` Redis client
+
+---
+class: center, middle
+
+... and many others
+
+---
+class: center, middle
+
+While each of the gems provides something useful, the truth is you only need the core `async` gem to access most of its benefits.
 
 ---
 
