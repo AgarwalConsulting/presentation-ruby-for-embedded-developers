@@ -778,6 +778,11 @@ class: center, middle
 ---
 class: center, middle
 
+Deep Copy?
+
+---
+class: center, middle
+
 ## Managing memory & object state
 
 ---
@@ -794,6 +799,48 @@ Ruby’s heap is not the system heap (`malloc`), but a custom managed heap of ob
 class: center, middle
 
 `ObjectSpace`
+
+---
+class: center, middle
+
+## GC
+
+---
+
+- **Mark-and-Sweep** (classic strategy):
+
+  - *Mark phase*: Traverses object graph and marks reachable objects.
+  - *Sweep phase*: Frees unmarked (unreachable) objects.
+
+---
+
+- **Generational GC** (since Ruby 2.1):
+
+  - **Young**: Newly created, short-lived objects.
+  - **Old**: Objects that survived multiple GC cycles.
+  - Optimizes for most objects dying young → fewer full GC cycles.
+
+---
+
+- **Incremental GC** (since 2.2):
+
+  - Splits mark phase to reduce pause time.
+
+---
+
+- **Compacting GC** (since Ruby 2.7, opt-in):
+
+  - Compacts live objects to reduce memory fragmentation.
+
+---
+class: center, middle
+
+### 🔧 GC Controls (MRI)
+
+---
+class: center, middle
+
+Ruby exposes many GC controls via the `GC` module.
 
 ---
 class: center, middle
