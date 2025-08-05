@@ -651,6 +651,67 @@ class: center, middle
 
 ---
 
+- `fork` - Creates a **child Ruby process**. Both parent and child continue execution.
+
+- `exec` - **Replaces** the current Ruby process with an external command. **Never returns** if successful.
+
+- `system` - Run a command, wait for it to finish. Returns: true if exit status is 0, false otherwise.
+
+- `spawn` - Starts a **new external process**. Returns immediately with the PID. Ruby keeps running.
+
+- Backticks ( `` `cmd` `` / `%x{}` ) - Runs a shell command and **returns its output** as a string. **Blocks until done**.
+
+---
+
+You can’t pass stdin with:
+
+| Method                  | stdin support                               |
+| ----------------------- | ------------------------------------------- |
+| `` `cmd` `` (backticks) | ❌ No stdin control                          |
+| `exec`                  | ❌ Replaces Ruby process; no stdin from Ruby |
+| `system`                | 🚫 Limited — no direct stdin control        |
+
+---
+class: center, middle
+
+### Ways to Pass to stdin
+
+---
+class: center, middle
+
+`IO.popen` vs `spawn` vs `Open3.popen2`
+
+---
+
+| Method         | Can write to stdin?  | Can read output?  | Notes                         |
+| -------------- | -------------------- | ----------------- | ----------------------------- |
+| `IO.popen`     | ✅                   | ✅                | Simple and versatile          |
+| `spawn` + pipe | ✅                   | ✅                | Needs manual pipe setup       |
+| `Open3.popen2` | ✅                   | ✅                | Cleaner, safer subprocess API |
+| `` `cmd` ``    | ❌                   | ✅                | Output only                   |
+| `exec`         | ❌                   | ❌                | Replaces Ruby process         |
+
+---
+class: center, middle
+
+## Blocks vs Procs vs Lambda
+
+---
+class: center, middle
+
+A block is a chunk of code enclosed in {} or do...end, passed to a method implicitly.
+
+---
+class: center, middle
+
+A Proc is an instance of the Proc class. It allows you to store a block in a variable.
+
+---
+class: center, middle
+
+A lambda is a special kind of Proc with stricter rules.
+
+---
 class: center, middle
 
 Code
