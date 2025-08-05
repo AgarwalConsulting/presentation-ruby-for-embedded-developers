@@ -1513,6 +1513,67 @@ On constrained systems, avoid heavy tools:
 ---
 class: center, middle
 
+## 🔍 **Benchmarking Embedded Ruby Apps**
+
+---
+
+| Area      | Metrics                         | Tools / Methods                        |
+| --------- | ------------------------------- | -------------------------------------- |
+| CPU       | Execution time, CPU usage       | `Benchmark`, `time`, `perf`, `strace`  |
+| Memory    | Peak usage, leaks, GC pressure  | `memory_profiler`, `/proc`, `valgrind` |
+| I/O       | Disk/Socket throughput          | Custom timers, `iostat`, `strace`      |
+| GC        | GC time, frequency, heap growth | `GC::Profiler`, `ObjectSpace`          |
+| Threading | Context switches, lock time     | `htop`, `strace`, `dstat`, `rbspy`     |
+
+---
+
+### 🛠️ **Tools (All Embeddable)**
+
+- **`Benchmark` (stdlib)** – Time small blocks of code.
+
+- **`GC::Profiler`** – Analyze GC duration per cycle.
+
+- **`ObjectSpace.each_object`** – Count object allocations.
+
+- **`memory_profiler`** – Measure memory leaks/retention.
+
+- **`rbspy`** – Sampling profiler, works without modifying code.
+
+- **`valgrind` (native)** – Catch memory issues (ruby must be compiled with debug symbols).
+
+- **`stackprof`** – For call graph and flamegraph data.
+
+---
+class: center, middle
+
+`benchmark` (stdlib) vs `benchmark-ips` (gem)
+
+---
+
+| Feature              | `Benchmark` (stdlib)               | `benchmark-ips` (gem)                                |
+| -------------------- | ---------------------------------- | ---------------------------------------------------- |
+| Measures             | **Elapsed time** for a given run   | **Iterations per second** (IPS)                      |
+| Accuracy             | Basic, affected by system variance | More robust via statistical sampling                 |
+| Use case             | Small, deterministic operations    | Microbenchmarks, performance comparison              |
+| Output               | Execution time (sec)               | Iterations/sec, error margin, comparison summary     |
+| Dependencies         | ✅ None (stdlib)                    | ❌ Requires gem install (`gem install benchmark-ips`) |
+| Embedded Suitability | ✅ Excellent (no dependencies)      | ⚠️ Needs Gem support (may not suit minimal Ruby)     |
+
+---
+
+When to Use What?
+
+| Scenario                                      | Use                  |
+| --------------------------------------------- | -------------------- |
+| Embedded with minimal Ruby                    | `Benchmark` (stdlib) |
+| Simple performance measurements               | `Benchmark`          |
+| Comparing multiple implementations            | `benchmark-ips`      |
+| Need statistically meaningful throughput info | `benchmark-ips`      |
+| Measuring wall time for I/O                   | `Benchmark`          |
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
