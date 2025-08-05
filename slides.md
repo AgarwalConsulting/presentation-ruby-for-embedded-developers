@@ -662,8 +662,7 @@ class: center, middle
 - Backticks ( `` `cmd` `` / `%x{}` ) - Runs a shell command and **returns its output** as a string. **Blocks until done**.
 
 ---
-
-You can’t pass stdin with:
+---
 
 | Method                  | stdin support                               |
 | ----------------------- | ------------------------------------------- |
