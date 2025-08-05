@@ -688,7 +688,7 @@ class: center, middle
 | `IO.popen`     | ✅                   | ✅                | Simple and versatile          |
 | `spawn` + pipe | ✅                   | ✅                | Needs manual pipe setup       |
 | `Open3.popen2` | ✅                   | ✅                | Cleaner, safer subprocess API |
-| `` `cmd` ``    | ❌                   | ✅                | Output only                   |
+| backticks      | ❌                   | ✅                | Output only                   |
 | `exec`         | ❌                   | ❌                | Replaces Ruby process         |
 
 ---
