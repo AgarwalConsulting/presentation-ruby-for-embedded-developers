@@ -714,6 +714,90 @@ A lambda is a special kind of Proc with stricter rules.
 ---
 class: center, middle
 
+## Taking a closer look at variables in Ruby
+
+---
+class: center, middle
+
+Ruby is pass by `?`
+
+---
+class: center, middle
+
+Everything in Ruby is an object...
+
+---
+class: center, middle
+
+...and variables hold references, not the actual objects.
+
+---
+class: center, middle
+
+### Mutability
+
+---
+class: center, middle
+
+Some Ruby objects are mutable (can change in place), others are immutable.
+
+---
+
+| Type                   | Mutable? |
+| ---------------------- | -------- |
+| `String`               | ✅ Yes    |
+| `Array`                | ✅ Yes    |
+| `Hash`                 | ✅ Yes    |
+| `Integer`              | ❌ No     |
+| `Symbol`               | ❌ No     |
+| `true`, `false`, `nil` | ❌ No     |
+
+---
+class: center, middle
+
+Enforcing mutability using: `.freeze`
+
+---
+class: center, middle
+
+### What about cloning?
+
+---
+class: center, middle
+
+`dup` vs `clone`
+
+---
+
+| Feature                   | `dup`            | `clone`                       |
+| ------------------------- | ---------------- | ----------------------------- |
+| Copies frozen state?      | ❌ No             | ✅ Yes                         |
+| Copies singleton methods? | ❌ No             | ✅ Yes (in some Ruby versions) |
+| Typical use               | Lightweight copy | Exact replica                 |
+
+---
+class: center, middle
+
+## Managing memory & object state
+
+---
+class: center, middle
+
+Ruby’s heap, object lifecycle, and the ObjectSpace module all tie together to manage memory and object state behind the scenes.
+
+---
+class: center, middle
+
+Ruby’s heap is not the system heap (`malloc`), but a custom managed heap of object slots (called `RVALUE`s).
+
+---
+class: center, middle
+
+`ObjectSpace`
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
