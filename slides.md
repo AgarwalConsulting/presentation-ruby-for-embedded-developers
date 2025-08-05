@@ -2381,7 +2381,7 @@ Message.new(JSON.parse(json)) # parse back
 
 ---
 
-## 🔹 Tips for Real-World Webserver with Protobuf
+🔹 **Tips for Real-World Webserver with Protobuf**
 
 - **Use gRPC** for bi-directional streaming and structured APIs (Ruby has a gRPC gem).
 
