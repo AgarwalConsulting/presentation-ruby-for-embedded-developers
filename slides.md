@@ -801,6 +801,22 @@ class: center, middle
 `ObjectSpace`
 
 ---
+
+```ruby
+ObjectSpace.count_objects
+ObjectSpace.each_object
+ObjectSpace.dump_all
+```
+
+---
+
+| Method               | Purpose                         |
+| -------------------- | ------------------------------- |
+| `count_objects`      | Counts all objects by class     |
+| `each_object(Class)` | Iterates over live objects      |
+| `dump_all(output:)`  | Dumps heap as JSON for analysis |
+
+---
 class: center, middle
 
 ## GC
@@ -1004,8 +1020,31 @@ export RUBY_GC_HEAP_INIT_SLOTS=100000
 | `RUBY_GC_ENABLE_MOVE`   | true    | Allows compaction to move objects |
 
 ---
+class: center, middle
 
 ## Debugging and Profiling
+
+---
+class: center, middle
+
+### GC::Profiler
+
+---
+
+```ruby
+GC::Profiler.enable
+GC::Profiler.report
+GC::Profiler.clear
+```
+
+---
+
+| Feature               | Description                                |
+| --------------------- | ------------------------------------------ |
+| `GC::Profiler.enable` | Starts profiling GC runs                   |
+| `report`              | Returns per-GC stats: time, type, duration |
+| `raw_data`            | Array of hash per GC run                   |
+| `clear`               | Clears collected data                      |
 
 ---
 
@@ -1029,6 +1068,447 @@ export RUBY_GC_MALLOC_LIMIT=8000000
 export RUBY_GC_MALLOC_LIMIT_GROWTH_FACTOR=1.1
 export RUBY_GC_COMPACT=false
 ```
+
+---
+
+### Memory issues in Ruby typically manifest as
+
+- **Memory leaks** (objects not freed)
+- **Excessive memory usage**
+- **GC overhead**
+- **Fragmentation**
+
+---
+
+Detecting memory leaks in **long-lived embedded Ruby applications**—such as those running in IoT or consumer electronics—is especially critical since they often:
+
+- Run for **days/weeks without restart**
+
+- Have **limited memory** (often under 512MB)
+
+- Use **custom Ruby builds** or stripped-down interpreters (like MRuby, though standard CRuby is still common)
+
+---
+class: center, middle
+
+#### Key Tools for Memory Profiling
+
+---
+class: center, middle
+
+##### 🔹 `ObjectSpace`
+
+---
+
+```ruby
+ObjectSpace.each_object(String).count
+ObjectSpace.memsize_of(obj)   # Memory size in bytes
+```
+
+---
+
+Check for Object Retention Patterns:
+
+Leaks often come from:
+
+| Cause                  | Example                       |
+| ---------------------- | ----------------------------- |
+| Global/class variables | `@@cache = []`                |
+| Closures holding refs  | `-> { user }`                 |
+| Circular references    | `A → B → A`                   |
+| Long-lived threads     | `Thread.new { loop { ... } }` |
+| C extension leaks      | mallocs not freed             |
+
+---
+
+**Use**:
+
+```ruby
+ObjectSpace.each_object(ClassName) do |obj|
+  puts ObjectSpace.allocation_sourcefile(obj)
+end
+```
+
+---
+class: center, middle
+
+##### 🔹 `GC.stat`
+
+Use this to monitor garbage collector behavior.
+
+---
+
+```ruby
+pp GC.stat
+```
+
+---
+class: center, middle
+
+##### Test under Simulated Runtime
+
+Create a stress harness that mimics the embedded system’s long-term usage.
+
+---
+
+Example:
+
+```ruby
+100_000.times do
+  MyService.handle_event(generate_fake_data)
+  GC.start if rand < 0.1
+end
+```
+
+---
+
+Then:
+
+- Monitor memory via `ps`, `top`, or `get_process_mem`
+
+- Plot object counts with `ObjectSpace`
+
+---
+class: center, middle
+
+##### Log GC Statistics Periodically
+
+---
+
+```ruby
+loop do
+  sleep 60
+  puts GC.stat.slice(:heap_used, :heap_allocated_pages, :total_allocated_objects)
+end
+```
+
+---
+class: center, middle
+
+Growing `heap_allocated_pages` = potential problem.
+
+---
+class: center, middle
+
+##### 🔹 `memory_profiler`
+
+Gem that provides a detailed report of memory allocations.
+
+---
+class: center, middle
+
+**Purpose**: Analyze object allocations, retained memory, and garbage collection inefficiencies.
+
+---
+class: center, middle
+
+```sh
+gem install memory_profiler
+```
+
+---
+
+```ruby
+require 'memory_profiler'
+
+report = MemoryProfiler.report do
+  # code block to profile
+end
+report.pretty_print
+```
+
+---
+
+**Key Features of memory_profiler**:
+
+- Shows **retained objects** by type and source line.
+
+- Helps detect **memory leaks** and **hotspots**.
+
+- Lightweight, easy to integrate into test cycles.
+
+---
+
+**Limitations of memory_profiler**:
+
+- No real-time profiling.
+
+- Focused on Ruby-level allocations, not native memory.
+
+---
+class: center, middle
+
+##### 🔹 `stackprof`
+
+Sample-based profiler (CPU, object allocation).
+
+---
+class: center, middle
+
+**Purpose**: Analyze **performance bottlenecks**, **memory allocations**, and **GC impact** with low overhead.
+
+---
+class: center, middle
+
+```sh
+gem install stackprof
+```
+
+---
+
+```ruby
+require 'stackprof'
+
+StackProf.run(mode: :object, out: 'tmp.dump') do
+  # code
+end
+```
+
+---
+
+Then visualize with:
+
+```sh
+stackprof tmp.dump
+```
+
+---
+
+**Modes**:
+
+- `:cpu` – samples execution stack every N microseconds.
+
+- `:wall` – samples real time (good for I/O-heavy apps).
+
+- `:object` – tracks object allocations.
+
+---
+class: center, middle
+
+##### ⚙️ `ruby-prof`
+
+Full Profiling Tool (Wall Time, Allocations, GC)
+
+---
+class: center, middle
+
+**Purpose**: Instrument Ruby code for deep **performance and memory** insights.
+
+---
+class: center, middle
+
+```sh
+gem install ruby-prof
+```
+
+---
+
+**Modes**:
+
+- `ALLOCATIONS`
+
+- `MEMORY`
+
+- `WALL_TIME`, `PROCESS_TIME`
+
+- `GC_RUNS`, `GC_TIME`
+
+---
+
+**Output Types**:
+
+- Flat, Graph, Call Tree
+
+- Callgrind (for `kcachegrind` GUI)
+
+---
+
+**Best For**:
+
+- Profiling method-level memory use.
+
+- Detecting high-GC or excessive allocation methods.
+
+---
+class: center, middle
+
+##### 🧠 `valgrind` – Native Memory Profiler (for C/Ruby internals)
+
+---
+class: center, middle
+
+**Purpose**: Track native memory leaks, invalid reads/writes, malloc/free mismatches.
+
+---
+
+**Use Case in Ruby**:
+
+- Ruby's C extensions.
+
+- Native segfaults or hard-to-debug memory bugs.
+
+---
+class: center, middle
+
+```sh
+valgrind ruby myscript.rb
+```
+
+---
+
+**Gotchas**:
+
+- Very slow (3–10x).
+
+- Shows **native memory**, not Ruby object heap.
+
+---
+
+**Advanced**:
+
+- Use with debugging symbols:
+
+```sh
+RUBY_DEBUG=yes ./configure --enable-debug-env
+make && make install
+valgrind --tool=memcheck ruby -d myscript.rb
+```
+
+---
+class: center, middle
+
+##### 🔹 `derailed_benchmarks` (Optional)
+
+Great for Rails apps. Helps detect where memory bloat starts.
+
+---
+
+```sh
+bundle exec derailed bundle:mem
+```
+
+---
+class: center, middle
+
+##### 🔹 `objspace` stdlib (requires `RUBYOPT="--enable-frozen-string-literal"` for accuracy)
+
+---
+
+```ruby
+require 'objspace'
+ObjectSpace.trace_object_allocations do
+  str = "hello"
+  puts ObjectSpace.allocation_sourcefile(str)
+end
+```
+
+---
+
+| Tool              | Use Case                      | Tracks      | Overhead | Best For                     |
+| ----------------- | ----------------------------- | ----------- | -------- | ---------------------------- |
+| `memory_profiler` | Object allocation analysis    | Ruby heap   | Low      | Memory leaks, test profiling |
+| `stackprof`       | Sampled profiler              | CPU, allocs | Very low | Realtime app profiling       |
+| `ruby-prof`       | Full instrumentation profiler | All         | Medium   | Deep performance+memory dive |
+| `valgrind`        | Native memory checker         | malloc/free | High     | C extensions, native bugs    |
+
+---
+class: center, middle
+
+#### Common Techniques for debugging memory leaks
+
+---
+
+`1.` Check for leaks:
+
+```ruby
+GC.start
+ObjectSpace.each_object(MyClass).count
+```
+
+Use this in a loop or long-running task to check if objects are accumulating.
+
+`2.` Force GC and measure memory before/after:
+
+```ruby
+before = `ps -o rss= -p #{Process.pid}`.to_i
+GC.start
+after = `ps -o rss= -p #{Process.pid}`.to_i
+puts "RSS change: #{before - after} KB"
+```
+
+---
+
+`3.` Track allocations:
+
+Use `ObjectSpace.trace_object_allocations` to pinpoint where objects are created.
+
+`4.` Limit object retention:
+
+- Avoid global variables, class variables, or caching unbounded data.
+- Watch out for closures or procs holding references.
+
+---
+
+### 🐞 Special Notes for Embedded Context
+
+`1.` **Strip it down**:
+
+- Avoid heavy gems that retain global state
+
+- Minimize metaprogramming and open classes
+
+`2.` GC Tuning:
+
+Use env vars or `GC::Profiler.enable` to adjust frequency.
+
+```ruby
+ENV['RUBY_GC_HEAP_OLDOBJECT_LIMIT_FACTOR'] = '1.0'
+ENV['RUBY_GC_HEAP_INIT_SLOTS'] = '600000'
+```
+
+---
+
+`3.` Consider Ruby version:
+
+Ruby 3+ has **compacting GC**, which can help with fragmentation but may **introduce pauses**—test if worth enabling via:
+
+```ruby
+GC.verify_compaction_references(double_heap: true, toward: :empty)
+GC.compact
+```
+
+---
+
+#### Lightweight Native Monitoring
+
+On constrained systems, avoid heavy tools:
+
+- Use `/proc/<pid>/status` to track `VmRSS`, `VmSize`
+
+- Use `valgrind` (only on dev machine) for extension/malloc issues
+
+---
+
+#### Fixing Tips
+
+- **Use Symbols cautiously**: Avoid dynamic symbol generation (`:"#{input}"`) in older Ruby.
+
+- **Use `GC.verify_compaction_references`** before compaction (if using compacting GC in 3.x+).
+
+- **Avoid Object Retention**: Reuse where possible, or allow GC to clean.
+
+---
+
+#### Patterns That Cause Memory Leaks
+
+| Pattern                      | Description                      |
+| ---------------------------- | -------------------------------- |
+| 🔁 Caches                    | LRU/memoization without eviction |
+| 💣 Procs/lambdas             | Retain outer scope references    |
+| 🔗 ActiveRecord              | Associations loading huge trees  |
+| 🧵 Threads                   | Not GC-ed until joined           |
+| 🧱 Large Arrays              | Holding unused large containers  |
+| 🧙‍♂️ Singleton-like globals | Objects never released           |
 
 ---
 class: center, middle
