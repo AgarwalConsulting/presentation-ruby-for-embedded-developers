@@ -2372,6 +2372,15 @@ req['Content-Type'] = 'application/x-protobuf'
 
 ---
 
+### JSON Interop
+
+```ruby
+json = message.to_h.to_json          # serialize to JSON
+Message.new(JSON.parse(json)) # parse back
+```
+
+---
+
 ## 🔹 Tips for Real-World Webserver with Protobuf
 
 - **Use gRPC** for bi-directional streaming and structured APIs (Ruby has a gRPC gem).
