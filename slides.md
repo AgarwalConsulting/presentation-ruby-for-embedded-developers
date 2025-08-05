@@ -807,30 +807,93 @@ class: center, middle
 
 ---
 
-- **Mark-and-Sweep** (classic strategy):
+**Mark-and-Sweep** (classic strategy):
 
-  - *Mark phase*: Traverses object graph and marks reachable objects.
-  - *Sweep phase*: Frees unmarked (unreachable) objects.
-
----
-
-- **Generational GC** (since Ruby 2.1):
-
-  - **Young**: Newly created, short-lived objects.
-  - **Old**: Objects that survived multiple GC cycles.
-  - Optimizes for most objects dying young → fewer full GC cycles.
+- *Mark phase*: Traverses object graph and marks reachable objects.
+- *Sweep phase*: Frees unmarked (unreachable) objects.
 
 ---
 
-- **Incremental GC** (since 2.2):
+**Generational GC** (since Ruby 2.1):
 
-  - Splits mark phase to reduce pause time.
+- **Young**: Newly created, short-lived objects.
+- **Old**: Objects that survived multiple GC cycles.
+- Optimizes for most objects dying young → fewer full GC cycles.
 
 ---
 
-- **Compacting GC** (since Ruby 2.7, opt-in):
+**Incremental GC** (since 2.2):
 
-  - Compacts live objects to reduce memory fragmentation.
+- Splits mark phase to reduce pause time.
+
+---
+
+**Compacting GC** (since Ruby 2.7, opt-in):
+
+- Compacts live objects to reduce memory fragmentation.
+
+---
+class: center, middle
+
+Garbage Compaction reorganizes live objects in memory to reduce fragmentation by placing them close together.
+
+---
+class: center, middle
+
+This frees up larger contiguous blocks of memory and improves cache performance.
+
+---
+class: center, middle
+
+Only works on *Movable* objects.
+
+---
+
+### Movable objects are Ruby heap-allocated objects that
+
+- Have no external (C-level) pointers referencing them
+
+- Are not frozen or pinned
+
+- Are known to the GC as safe to relocate
+
+When an object is movable, Ruby's GC can shift it to a different location in the heap to reduce fragmentation.
+
+---
+
+| Type                                        | Movable? | Notes                                              |
+| ------------------------------------------- | -------- | -------------------------------------------------- |
+| `String`                                    | ✅        | If not frozen or externally referenced             |
+| `Array`                                     | ✅        | Elements are references — the container is movable |
+| `Hash`                                      | ✅        | Keys/values are pointers — hash table can move     |
+| Custom class instances                      | ✅        | Unless used by native extension                    |
+| `Struct`                                    | ✅        | If fully Ruby-side                                 |
+| Symbols                                     | ❌        | Internal, non-GC heap                              |
+| `Fixnum`, `Float`, `true`, `nil`, `false`   | ❌        | Immediate values, not heap objects                 |
+| Finalized objects                           | ❌        | Pinned during finalization                         |
+| Objects referenced from native C extensions | ❌        | Automatically pinned for safety                    |
+
+---
+
+### What Makes an Object Unmovable (Pinned)?
+
+- External C references:
+
+  Native extensions like libxml, ffi, curses, etc., may store raw C pointers to Ruby objects.
+
+  Ruby cannot track these safely → it disables compaction on such objects.
+
+- Finalizers (`ObjectSpace.define_finalizer`):
+
+  These may access internal memory structures → Ruby disables compaction.
+
+- Frozen internal objects:
+
+  Some internals (like method tables, constant names) are protected from relocation.
+
+- Explicitly Pinned by C API:
+
+  Extensions using `rb_gc_register_address()` pin objects manually.
 
 ---
 class: center, middle
@@ -841,6 +904,131 @@ class: center, middle
 class: center, middle
 
 Ruby exposes many GC controls via the `GC` module.
+
+---
+
+```ruby
+GC.start # Manually triggers GC
+GC.disable # Disable automatic GC
+GC.enable  # Enable it again
+```
+
+---
+class: center, middle
+
+```ruby
+GC.stat    # Returns stats as a hash
+```
+
+---
+class: center, middle
+
+```ruby
+GC.stat[:heap_live_slots] # Number of live (reachable) objects
+GC.stat[:total_allocated_objects]
+```
+
+---
+
+| Method                            | Purpose                                              |
+| --------------------------------- | ---------------------------------------------------- |
+| `GC.start`                        | Manually trigger GC                                  |
+| `GC.disable`                      | Disable automatic GC                                 |
+| `GC.enable`                       | Re-enable GC                                         |
+| `GC.compact`                      | Compact the heap                                     |
+| `GC.stat`                         | Return hash of GC stats                              |
+| `GC.latest_gc_info`               | Info on the last GC                                  |
+| `GC.verify_compaction_references` | Validate that object references remain valid (debug) |
+
+---
+
+### ⚙️ Advanced: GC in Embedded Ruby
+
+If you’re using **Ruby in embedded systems (e.g., Yocto, Buildroot)**:
+
+- Use **MRuby** for tighter control (no GC unless enabled).
+
+- Tune memory behavior at compile time (via `GC_ARENA_SIZE`, etc.)
+
+- Consider disabling compacting GC if memory is highly fragmented or constrained.
+
+---
+class: center, middle
+
+### GC Tuning using Environment Variables
+
+---
+class: center, middle
+
+set before Ruby starts
+
+---
+class: center, middle
+
+```bash
+export RUBY_GC_HEAP_INIT_SLOTS=100000
+```
+
+---
+
+#### 🧱 Memory Allocation / Heap Growth
+
+| Variable                              | Default       | Purpose                                   |
+| ------------------------------------- | ------------- | ----------------------------------------- |
+| `RUBY_GC_HEAP_INIT_SLOTS`             | 10000         | Initial object slot count                 |
+| `RUBY_GC_HEAP_FREE_SLOTS`             | 4096          | GC triggers when fewer slots are free     |
+| `RUBY_GC_HEAP_GROWTH_FACTOR`          | 1.8           | Controls heap growth rate                 |
+| `RUBY_GC_HEAP_GROWTH_MAX_SLOTS`       | 0 (unlimited) | Caps growth per GC cycle                  |
+| `RUBY_GC_HEAP_OLDOBJECT_LIMIT_FACTOR` | 2.0           | Triggers major GC if too many old objects |
+| `RUBY_GC_HEAP_OLDOBJECT_LIMIT_MAX`    | 0             | Max limit of old objects before major GC  |
+
+---
+
+#### 🧬 Malloc / C-side Allocation Triggers
+
+| Variable                             | Default | Purpose                            |
+| ------------------------------------ | ------- | ---------------------------------- |
+| `RUBY_GC_MALLOC_LIMIT`               | \~16MB  | GC if malloc’d memory exceeds this |
+| `RUBY_GC_MALLOC_LIMIT_MAX`           | \~32MB  | Max limit for malloc trigger       |
+| `RUBY_GC_MALLOC_LIMIT_GROWTH_FACTOR` | 1.4     | Controls malloc limit growth       |
+| `RUBY_GC_OLDMALLOC_LIMIT`            | \~128MB | Similar, for old-gen memory        |
+
+---
+
+#### 🔄 Compaction (Ruby ≥ 2.7)
+
+| Variable                | Default | Purpose                           |
+| ----------------------- | ------- | --------------------------------- |
+| `RUBY_GC_COMPACT`       | false   | Enable auto-compaction            |
+| `RUBY_GC_COMPACT_STATS` | false   | Dump compaction stats             |
+| `RUBY_GC_ENABLE_MOVE`   | true    | Allows compaction to move objects |
+
+---
+
+## Debugging and Profiling
+
+---
+
+### 📈 Debugging / Profiling
+
+| Variable          | Purpose                          |
+| ----------------- | -------------------------------- |
+| `RUBY_GC_PROFILE` | Enable GC::Profiler              |
+| `RUBY_GC_DEBUG`   | Dump internal GC debug info      |
+| `RUBY_GC_STRESS`  | Run GC after every alloc (slow!) |
+
+---
+
+#### Practical Tuning Setups for Low-Latency Embedded System
+
+```bash
+export RUBY_GC_HEAP_INIT_SLOTS=20000
+export RUBY_GC_HEAP_GROWTH_FACTOR=1.2
+export RUBY_GC_HEAP_GROWTH_MAX_SLOTS=10000
+export RUBY_GC_MALLOC_LIMIT=8000000
+export RUBY_GC_MALLOC_LIMIT_GROWTH_FACTOR=1.1
+export RUBY_GC_COMPACT=false
+```
 
 ---
 class: center, middle
