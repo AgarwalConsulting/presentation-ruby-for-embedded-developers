@@ -1990,7 +1990,7 @@ class: center, middle
 ---
 class: center, middle
 
-#### EventMachine (Event Loop, Reactor Pattern)**
+#### EventMachine (Event Loop, Reactor Pattern)
 
 .content-credits[https://rubydoc.info/github/eventmachine/eventmachine/frames]
 
