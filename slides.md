@@ -2796,6 +2796,18 @@ Ruby’s dynamic and object-oriented nature allows for concise, readable impleme
 | Reactor   | Non-blocking I/O/event manager      | Low-latency loops, embedded servers      |
 
 ---
+
+### ❌ Patterns to Avoid in Embedded Ruby
+
+| Pattern                | Why Not?                                  |
+| ---------------------- | ----------------------------------------- |
+| Abstract Factory       | Too heavy for embedded use cases          |
+| Interpreter            | Overkill unless you're building a DSL     |
+| Mediator               | Can introduce unwanted indirection        |
+| Active Record          | Too heavyweight and memory-intensive      |
+| Observer (from stdlib) | `Observable` is deprecated, not efficient |
+
+---
 class: center, middle
 
 ## Testing & Debugging
