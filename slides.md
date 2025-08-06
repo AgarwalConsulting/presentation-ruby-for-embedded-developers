@@ -2538,6 +2538,247 @@ class: center, middle
 ---
 class: center, middle
 
+## Modular Architecture Blueprint for embedded ruby apps
+
+---
+
+### 📦 Example Directory Structure
+
+```
+/firmware
+  ├── hal/              # C/C++ drivers
+  ├── bindings/         # C extensions for Ruby
+  ├── scripts/          # Ruby logic
+  │   ├── config/
+  │   ├── rules/
+  │   ├── services/
+  ├── main.c            # Entry point (initializes Ruby VM)
+  ├── Makefile
+```
+
+---
+
+🧱 **High-Level Architectural Layers**
+
+`1.` **Hardware Abstraction Layer (HAL)**
+
+- Native C/C++ layer
+- Exposes APIs to Ruby via native extensions or FFI
+
+`2.` **Ruby Native Interface**
+
+- Interface between HAL and the embedded Ruby interpreter
+
+`3.` **Scripting Core (Ruby VM)**
+
+- Select based on constraints:
+
+  - **CRuby** (MRI): requires embedded Linux
+  - **MRuby**: most embedded-friendly, supports native compilation
+  - **Artichoke**: alternative Rust-based Ruby for embedded
+  - **Opal** (for JS-hosted embedded devices)
+
+---
+
+`4.` **Application Layer (User Code)**
+
+- Business logic written in Ruby:
+
+  - Rules, behavior scripts, finite state machines
+  - Sensor event handling
+  - Configurable tasks (via YAML/JSON/DSL)
+
+---
+class: center, middle
+
+### Control Loop Pattern
+
+---
+
+Many embedded Ruby apps are structured as a control loop:
+
+```ruby
+loop do
+  update_sensors
+  compute_actions
+  apply_outputs
+  sleep interval
+end
+```
+
+---
+
+### 🧠 **Memory & GC Considerations**
+
+- Avoid object churn in tight loops
+- Preallocate buffers
+- Use immutable objects
+- Explicit `GC.disable` or `GC.start` at safe points
+- For MRI:
+
+  - Use `GC::Profiler` and `ObjectSpace`
+
+- For MRuby:
+
+  - Configure memory pools
+  - No moving GC — more deterministic
+
+---
+class: center, middle
+
+## SOLID Principles
+
+---
+
+- Single Responsibility
+
+- Open/Closed
+
+- Liskov Substitution
+
+- Interface Segregation
+
+- Dependency Inversion
+
+---
+class: center, middle
+
+`1.` **Single Responsibility Principle (SRP)**
+
+---
+class: center, middle
+
+A class should have only one reason to change...
+
+---
+class: center, middle
+
+... meaning it should have only one job or responsibility.
+
+---
+class: center, middle
+
+`2.` **Open/Closed Principle (OCP)**
+
+---
+class: center, middle
+
+Software entities should be open for extension but closed for modification...
+
+---
+class: center, middle
+
+... meaning new functionality should be added by adding new code, not by changing existing code.
+
+---
+class: center, middle
+
+Use **Duck Typing** and **polymorphism** in Ruby to extend behavior without altering existing code.
+
+---
+class: center, middle
+
+`3.` **Liskov Substitution Principle (LSP)**
+
+---
+class: center, middle
+
+Subtypes must be substitutable for their base types.
+
+---
+class: center, middle
+
+`i.e.)` Objects of a superclass should be replaceable with objects of its subclasses without altering the correctness of the program.
+
+---
+class: center, middle
+
+In Ruby, this means **duck-typed classes** should honor expectations.
+
+---
+class: center, middle
+
+`4.` **Interface Segregation Principle (ISP)**
+
+---
+class: center, middle
+
+Clients should not be forced to depend on interfaces they do not use.
+
+---
+class: center, middle
+
+This principle encourages the creation of fine-grained interfaces rather than large, all-encompassing ones.
+
+---
+class: center, middle
+
+In Ruby, favor **smaller role-specific modules** over large monolithic ones.
+
+---
+class: center, middle
+
+`5.` **Dependency Inversion Principle (DIP)**
+
+---
+class: center, middle
+
+High-level modules should not depend on low-level modules. Both should depend on abstractions.
+
+---
+class: center, middle
+
+Abstractions should not depend on details. Details should depend on abstractions.
+
+---
+class: center, middle
+
+In Ruby, use **duck typing or dependency injection** to abstract implementations.
+
+---
+
+### SOLID Summary
+
+| Principle | Key Idea              | Ruby Tip                                    |
+| --------- | --------------------- | ------------------------------------------- |
+| SRP       | One reason to change  | Split responsibilities into classes/modules |
+| OCP       | Extend, don’t modify  | Use duck typing and polymorphism            |
+| LSP       | Substitutability      | Maintain interface contracts                |
+| ISP       | Specific over general | Compose with small modules                  |
+| DIP       | Rely on abstractions  | Inject dependencies, not concrete classes   |
+
+---
+class: center, middle
+
+## Refactoring
+
+---
+
+- Step 1: Identify Responsibilities
+
+- Step 2: Refactor into Classes
+
+- Step 3: Apply any design patterns to make the code extensible
+
+---
+
+### ✅ Benefits of Refactoring
+
+| Procedural             | Refactored                      |
+| ---------------------- | ------------------------------- |
+| Hard to test           | Unit-testable                   |
+| All logic in one place | SRP: separated responsibilities |
+| No abstraction         | Extendable (e.g., JSON parser)  |
+| Hard to debug          | Traceable through interfaces    |
+
+---
+class: center, middle
+
+## Design Patterns
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
