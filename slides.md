@@ -2789,6 +2789,11 @@ Ruby’s dynamic and object-oriented nature allows for concise, readable impleme
 ---
 class: center, middle
 
+## Testing & Debugging
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
