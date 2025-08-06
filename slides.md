@@ -2392,6 +2392,152 @@ Message.new(JSON.parse(json)) # parse back
 ---
 class: center, middle
 
+## Metaprogramming
+
+---
+class: center, middle
+
+Writing code that writes or manipulates other code at runtime.
+
+---
+class: center, middle
+
+Ruby treats everything as an object, and class definitions are open and modifiable.
+
+---
+
+**Key concepts**:
+
+- `send`, `public_send`
+- `method_missing`, `respond_to_missing?`
+- `define_method`, `class_eval`, `instance_eval`
+- `const_get`, `const_set`
+- `singleton_class`, `eigenclass`
+- `Module#define_method`, `Module#included`
+
+---
+class: center, middle
+
+### Core Tools for Metaprogramming
+
+---
+
+**Dynamic dispatch**:
+
+  ```ruby
+  obj.send(:method_name, *args)
+  ```
+
+---
+
+**Intercepting calls**:
+
+Intercepts calls to undefined methods and allows you to dynamically handle them.
+
+  ```ruby
+  def method_missing(name, *args); ...; end
+  ```
+
+*Use Case:* Dynamic attribute access
+
+---
+
+**Creating methods at runtime**:
+
+Creates a method dynamically at **runtime**. Unlike `method_missing`, this defines a **real method**.
+
+  ```ruby
+  define_method(:greet) { puts "Hello!" }
+  ```
+
+*Use Case:* Creating accessors on the fly
+
+---
+
+**Runtime class manipulation**:
+
+Used to evaluate code **within the context of a class** or *instance*, allowing you to define methods or constants dynamically.
+
+  ```ruby
+  class_eval do ... end
+  instance_eval do ... end
+  ```
+
+*Use Case:* Defining methods from a config hash
+
+---
+class: center, middle
+
+### Building Domain-Specific Languages (DSLs)
+
+---
+class: center, middle
+
+DSLs allow users to describe behavior in a more natural or domain-specific syntax.
+
+---
+
+#### Types of DSLs
+
+- **Internal DSLs** (most common in Ruby)
+
+- External DSLs (custom parsers, rarely needed in Ruby)
+
+---
+class: center, middle
+
+#### 🔹 Key techniques for DSLs
+
+---
+
+**Instance eval context switching**:
+
+  ```ruby
+  class Config
+    def initialize(&block)
+      instance_eval(&block)
+    end
+    def setting(name, value); ...; end
+  end
+  ```
+
+---
+
+**Block-based DSLs**:
+
+  ```ruby
+  Form.build do
+    input :name
+    submit "Save"
+  end
+  ```
+
+---
+
+**Fluent interfaces** (chaining):
+
+  ```ruby
+  class Query
+    def where(...); self; end
+    def order(...); self; end
+  end
+  ```
+
+---
+
+*Caveats and Best Practices*
+
+- ✅ Use metaprogramming when it makes the code **simpler** for end users
+
+- ❌ Avoid it if it makes debugging, documentation, or error messages confusing
+
+- 🔍 Always document magic methods and behaviors
+
+- 🧪 Test behavior, not implementation — use specs
+
+---
+class: center, middle
+
 Code
 https://github.com/AgarwalConsulting/presentation-ruby-for-embedded-developers
 
