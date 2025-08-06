@@ -2787,6 +2787,15 @@ class: center, middle
 Ruby’s dynamic and object-oriented nature allows for concise, readable implementations of classic design patterns.
 
 ---
+
+| Pattern   | Purpose                             | When to Use                              |
+| --------- | ----------------------------------- | ---------------------------------------- |
+| Singleton | Single shared instance              | Global config, logger, device interface  |
+| Strategy  | Swappable behavior/logic            | Varying protocols, retries, rendering    |
+| Observer  | Broadcast changes to many listeners | Events, sensor updates, UI notifications |
+| Reactor   | Non-blocking I/O/event manager      | Low-latency loops, embedded servers      |
+
+---
 class: center, middle
 
 ## Testing & Debugging
